@@ -1,0 +1,5 @@
+package aiUtils
+
+func ConvertResumeToJSON() {
+
+}
