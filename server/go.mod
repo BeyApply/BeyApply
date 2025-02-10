@@ -1,15 +1,13 @@
 module BeyApply
 
 go 1.22.3
-
+ 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/sashabaranov/go-openai v1.37.0
-)
-
-require (
-	github.com/bytedance/sonic v1.12.8 // indirect
+  github.com/go-latex/latex v0.0.0-20240709081214-31cef3c7570e // indirect
+  github.com/bytedance/sonic v1.12.8 // indirect
 	github.com/bytedance/sonic/loader v0.2.3 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
