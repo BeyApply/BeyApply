@@ -21,36 +21,36 @@ export default function Home() {
       });
   }
 
-  const sendPdfTextToBackend = async (pdfText) => {
-    console.log("Sending PDF text to backend...");
-    try {
-      const resp = await fetch('http://localhost:8080/getResumeText', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: pdfText }),
-      });
+  // const sendPdfTextToBackend = async (pdfText) => {
+  //   console.log("Sending PDF text to backend...");
+  //   try {
+  //     const resp = await fetch('http://localhost:8080/getResumeText', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ text: pdfText }),
+  //     });
 
-      if (!resp.ok) {
-        throw new Error("Network response was not ok");
-      }
+  //     if (!resp.ok) {
+  //       throw new Error("Network response was not ok");
+  //     }
 
-      const result = await resp.json();
-      console.log("Response from backend:", result);
-      sessionStorage.setItem('resumeText', JSON.stringify(result));
+  //     const result = await resp.json();
+  //     console.log("Response from backend:", result);
+  //     sessionStorage.setItem('resumeText', JSON.stringify(result));
 
-      return result;
-    } catch (error) {
-      console.error("Error sending PDF text:", error);
-      return null;
-    }
-  };
+  //     return result;
+  //   } catch (error) {
+  //     console.error("Error sending PDF text:", error);
+  //     return null;
+  //   }
+  // };
 
   useEffect(() => {
     if (pdfText) {
       console.log("PDF Text extracted:", pdfText);
-      sendPdfTextToBackend(pdfText);
+      // sendPdfTextToBackend(pdfText);
     }
   }, [pdfText]);
 
