@@ -10,12 +10,13 @@ import (
 )
 
 func main() {
+	resumeText := "Carolina Campos  |   561 - 929 - 1237 |   ccampos2021@fau.edu   |   github.com/Carol0427  Education  Florida Atlantic University  Bachelor of   Science in   Computer Science (GPA: 3.4)   December   202 4  Relevant Certification s  AWS   Solutions   Architect Associates ,   Codepath Intermediat e   Full Stack   Development   for DevOps  Technical Skills  Languages/Frameworks:   Java ,   Python,   JavaScr ipt,   C++,   PHP,   Spri ng,   Node,   React,   MySQL,   HTML5  Technologies:   Git,   Linux,   AWS   SaaS   microservices , Docker/Kubernetes  Experience  Entrust   -   Software Engineering Intern   Sept 2023   –   Sept 2024  •   Integrat ed   client   and company produ cts   for seamless   cryptographic solutions, boosting deal closure  rates by 23% and facilitating sales worth up to $100,000.  •   Developed   tools in Pytho n   to automate   integration   in   reducing manual overhead and cutting  integration errors by 12% , while   doing code review.  •   A uthor ed   technical guides ,   that saved client engineers hundreds of hours by documenting common  errors, which accelerated client’s project timelines.  Projects  FloodSense  •   D evelop ed   full - stack   IoT application   with client specification   for real - time environmental monitoring  using a network of sensors   for data ingestion   an d   visualiza tion .  •   Built   with   React , Grafana, MapBox API   for front - end, and backend with   Java, Spring ,   AWS IoT Core,  Kafka, Telegraf   for depth mathem atics , InfluxDB   for database , and deployed on AWS EC2 instances .  AnonyVent (Waffle Hacks 2 nd   Place Winner)  •   A nonymously allows users to   record   and   view   venting sessions   with   an   AI generated transcription.  •   Built full - stack web app with   React , Node, JavaScript,   MongoDB, AWS S3, ChatGPT API, Assembly AI  API, Netlify, and Heroku.  LeafSafe  •   D etects   poisonous /inedible   plants   and p rovides customized advice on actions to take .  •   F ull Stack web app   developed with Next.js ,   utilizing the ChatGPT API for AI - driven plant identification  and advice.   Deployed on EC2.  Clubs/Organizations  Girls Who Code   -   President  •   Delegated and oversaw tasks   to a   cross - functional   8 - member Executive Board  •   Hosted various events and technical   w orkshop s in collaboration with local companies  •   Increased membership   from 15 to 52, a   247% growth in less than a year  •   Successfully raised funds through car washes and donors which increased our budget by 55%  Society of Hispanic Professional Engineers   –   Internal Affairs Committee  •   Oversee member   engagement and retention  •   Assist in resolving internal conflicts"
 	// Create a new OpenAI client
-	client := openai.NewClient("") // Replace with your actual OpenAI API key
+	client := openai.NewClient("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") // Replace with your actual OpenAI API key
 
-	resumeText := "sgdfg"
 	// Define the chat completion request
 	resp, err := client.CreateChatCompletion(
+
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model: "gpt-4", // Use "gpt-4" or the correct model name
@@ -34,7 +35,7 @@ Links: Extract any links (e.g., LinkedIn, GitHub, portfolio) and store them in a
 
 Education: Create a JSON object for Education where the key is the degree name (e.g., "B.S. in Computer Science"), and the value is a JSON object with the following keys:
 
-"Institution": The name of the institution.
+Institution: The name of the institution.
 
 "GPA": The GPA (if available).
 
@@ -108,7 +109,7 @@ Copy
   "Clubs/Organizations": {
     "Tech Club - President": [
       "Organized hackathons and workshops",
-      "Increased membership by 50%",
+      "Increased membership by 50 percent",
       "Raised funds for club activities"
     ]
   }
@@ -119,7 +120,7 @@ Input: [Resume text]
 
 Output: A JSON object with the structure described above.
 
-Tone: Maintain a professional and precise tone. Your role is to extract and organize data accurately without adding or omitting any details.
+Tone: Professional. Your role is to extract and organize data accurately without adding or omitting any details.
 
 Prompt: Given the resume text below, extract and organize the content into the specified JSON object. Ensure the output includes the keys name, links, Education, Technical Skills, Experience, Projects, and Clubs/Organizations.
 
