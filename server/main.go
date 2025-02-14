@@ -1,52 +1,77 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
+	"text/template"
 )
 
-func main() {
-	// Example LaTeX content
-	latexContent := `
-	\documentclass[10pt, letterpaper]{article}
+type ResumeInfo struct {
+	Name            string              `json:"name"`
+	Links           []string            `json:"links"`
+	Education       map[string]Degree   `json:"Education"`
+	TechnicalSkills TechnicalSkills     `json:"Technical Skills"`
+	Experience      map[string]Job      `json:"Experience"`
+	Projects        map[string][]string `json:"Projects"`
+	Clubs           map[string][]string `json:"Clubs/Organizations"`
+}
+
+type Degree struct {
+	Institution string `json:"Institution"`
+	GPA         string `json:"GPA"`
+	Date        string `json:"Date"`
+}
+
+type TechnicalSkills struct {
+	LanguagesFrameworks []string `json:"Languages/Frameworks"`
+	Technologies        []string `json:"Technologies"`
+}
+
+type Job struct {
+	Date             string   `json:"Date"`
+	Role             string   `json:"Role"`
+	Responsibilities []string `json:"Responsibilities"`
+}
+
+const latexTemplate = `\documentclass[10pt, letterpaper]{article}
 
 % Packages:
 \usepackage[
-    ignoreheadfoot, % set margins without considering header and footer
-    top=2 cm, % separation between body and page edge from the top
-    bottom=2 cm, % separation between body and page edge from the bottom
-    left=2 cm, % separation between body and page edge from the left
-    right=2 cm, % separation between body and page edge from the right
-    footskip=1.0 cm, % separation between body and footer
-    % showframe % for debugging 
-]{geometry} % for adjusting page geometry
-\usepackage{titlesec} % for customizing section titles
-\usepackage{tabularx} % for making tables with fixed width columns
-\usepackage{array} % tabularx requires this
-\usepackage[dvipsnames]{xcolor} % for coloring text
-\definecolor{primaryColor}{RGB}{0, 0, 0} % define primary color
-\usepackage{enumitem} % for customizing lists
-\usepackage{fontawesome5} % for using icons
-\usepackage{amsmath} % for math
+    ignoreheadfoot,
+    top=2 cm,
+    bottom=2 cm,
+    left=2 cm,
+    right=2 cm,
+    footskip=1.0 cm,
+]{geometry}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{primaryColor}{RGB}{0, 0, 0}
+\usepackage{enumitem}
+\usepackage{fontawesome5}
+\usepackage{amsmath}
 \usepackage[
-    pdftitle={John Doe's CV},
-    pdfauthor={John Doe},
+    pdftitle={ {{.Name}} 's CV},
+    pdfauthor={ {{.Name}} },
     pdfcreator={LaTeX with RenderCV},
     colorlinks=true,
     urlcolor=primaryColor
-]{hyperref} % for links, metadata and bookmarks
-\usepackage[pscoord]{eso-pic} % for floating text on the page
-\usepackage{calc} % for calculating lengths
-\usepackage{bookmark} % for bookmarks
-\usepackage{lastpage} % for getting the total number of pages
-\usepackage{changepage} % for one column entries (adjustwidth environment)
-\usepackage{paracol} % for two and three column entries
-\usepackage{ifthen} % for conditional statements
-\usepackage{needspace} % for avoiding page break right after the section title
-\usepackage{iftex} % check if engine is pdflatex, xetex or luatex
+]{hyperref}
+\usepackage[pscoord]{eso-pic}
+\usepackage{calc}
+\usepackage{bookmark}
+\usepackage{lastpage}
+\usepackage{changepage}
+\usepackage{paracol}
+\usepackage{ifthen}
+\usepackage{needspace}
+\usepackage{iftex}
 
-% Ensure that generated pdf is machine readable/ATS parsable:
 \ifPDFTeX
     \input{glyphtounicode}
     \pdfgentounicode=1
@@ -55,32 +80,22 @@ func main() {
     \usepackage{lmodern}
 \fi
 
-\usepackage{charter}
+\usepackage{mathptmx}
 
-% Some settings:
 \raggedright
-\AtBeginEnvironment{adjustwidth}{\partopsep0pt} % remove space before adjustwidth environment
-\pagestyle{empty} % no header or footer
-\setcounter{secnumdepth}{0} % no section numbering
-\setlength{\parindent}{0pt} % no indentation
-\setlength{\topskip}{0pt} % no top skip
-\setlength{\columnsep}{0.15cm} % set column separation
-\pagenumbering{gobble} % no page numbering
+\AtBeginEnvironment{adjustwidth}{\partopsep0pt}
+\pagestyle{empty}
+\setcounter{secnumdepth}{0}
+\setlength{\parindent}{0pt}
+\setlength{\topskip}{0pt}
+\setlength{\columnsep}{0.15cm}
+\pagenumbering{gobble}
 
 \titleformat{\section}{\needspace{4\baselineskip}\bfseries\large}{}{0pt}{}[\vspace{1pt}\titlerule]
+\titlespacing{\section}{-1pt}{0.3 cm}{0.2 cm}
 
-\titlespacing{\section}{
-    % left space:
-    -1pt
-}{
-    % top space:
-    0.3 cm
-}{
-    % bottom space:
-    0.2 cm
-} % section title spacing
 
-\renewcommand\labelitemi{$\vcenter{\hbox{\small$\bullet$}}$} % custom bullet points
+\renewcommand\labelitemi{$\vcenter{\hbox{\small$\bullet$}}$}
 \newenvironment{highlights}{
     \begin{itemize}[
         topsep=0.10 cm,
@@ -91,29 +106,13 @@ func main() {
     ]
 }{
     \end{itemize}
-} % new environment for highlights
-
-\newenvironment{highlightsforbulletentries}{
-    \begin{itemize}[
-        topsep=0.10 cm,
-        parsep=0.10 cm,
-        partopsep=0pt,
-        itemsep=0pt,
-        leftmargin=10pt
-    ]
-}{
-    \end{itemize}
-} % new environment for highlights for bullet entries
+}
 
 \newenvironment{onecolentry}{
-    \begin{adjustwidth}{
-        0 cm + 0.00001 cm
-    }{
-        0 cm + 0.00001 cm
-    }
+    \begin{adjustwidth}{0 cm + 0.00001 cm}{0 cm + 0.00001 cm}
 }{
     \end{adjustwidth}
-} % new environment for one column entries
+}
 
 \newenvironment{twocolentry}[2][]{
     \onecolentry
@@ -124,225 +123,228 @@ func main() {
     \switchcolumn \raggedleft \secondColumn
     \end{paracol}
     \endonecolentry
-} % new environment for two column entries
-
-\newenvironment{threecolentry}[3][]{
-    \onecolentry
-    \def\thirdColumn{#3}
-    \setcolumnwidth{, \fill, 4.5 cm}
-    \begin{paracol}{3}
-    {\raggedright #2} \switchcolumn
-}{
-    \switchcolumn \raggedleft \thirdColumn
-    \end{paracol}
-    \endonecolentry
-} % new environment for three column entries
-
-\newenvironment{header}{
-    \setlength{\topsep}{0pt}\par\kern\topsep\centering\linespread{1.5}
-}{
-    \par\kern\topsep
-} % new environment for the header
-
-\newcommand{\placelastupdatedtext}{% \placetextbox{<horizontal pos>}{<vertical pos>}{<stuff>}
-  \AddToShipoutPictureFG*{% Add <stuff> to current page foreground
-    \put(
-        \LenToUnit{\paperwidth-2 cm-0 cm+0.05cm},
-        \LenToUnit{\paperheight-1.0 cm}
-    ){\vtop{{\null}\makebox[0pt][c]{
-        \small\color{gray}\textit{Last updated in September 2024}\hspace{\widthof{Last updated in September 2024}}
-    }}}%
-  }%
-}%
-
-% save the original href command in a new command:
-\let\hrefWithoutArrow\href
-
-% new command for external links:
+}
 
 \begin{document}
-    \newcommand{\AND}{\unskip
-        \cleaders\copy\ANDbox\hskip\wd\ANDbox
-        \ignorespaces
-    }
+    \newcommand{\AND}{\quad | \quad}
     \newsavebox\ANDbox
     \sbox\ANDbox{$|$}
 
-    \begin{header}
-        \fontsize{25 pt}{25 pt}\selectfont John Doe
+    \begin{center}
+    \fontsize{25 pt}{25 pt}\selectfont {{.Name}}
 
-        \vspace{5 pt}
+    \vspace{5 pt}
+    \normalsize
+    \begin{tabular}{c}  % This ensures links are centered and on the same line
+        {{ range $index, $link := .Links }}
+            {{if $index}} \quad | \quad {{end}}
+            \href{ {{$link}} }{ {{$link}} }
+        {{end}}
+    \end{tabular}
+\end{center}
 
-        \normalsize
-        
-        \mbox{\hrefWithoutArrow{mailto:youremail@yourdomain.com}{youremail@yourdomain.com}}%
-        \kern 5.0 pt%
-        \AND%
-        \kern 5.0 pt%
-        \mbox{\hrefWithoutArrow{tel:+90-541-999-99-99}{0541 999 99 99}}%
-        \kern 5.0 pt%
-        \AND%
-        \kern 5.0 pt%
-        \mbox{\hrefWithoutArrow{https://yourwebsite.com/}{yourwebsite.com}}%
-        \kern 5.0 pt%
-        \AND%
-        \kern 5.0 pt%
-        \mbox{\hrefWithoutArrow{https://linkedin.com/in/yourusername}{linkedin.com/in/yourusername}}%
-        \kern 5.0 pt%
-    \end{header}
+    \section{Education}
+    {{range $degree, $details := .Education}}
+        \begin{twocolentry}{ {{$details.Date}} }
+            \textbf{ {{$details.Institution}} }, {{$degree}}
+        \end{twocolentry}
 
-    \section{Education}        
-    \begin{twocolentry}{
-        Sept 2000 – May 2005
-    }
-        \textbf{University of Pennsylvania}, BS in Computer Science
-    \end{twocolentry}
-
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item GPA: 3.9/4.0 (\href{https://example.com}{a link to somewhere})
-            \item \textbf{Coursework:} Computer Architecture, Comparison of Learning Algorithms, Computational Theory
-        \end{highlights}
-    \end{onecolentry}
+        \vspace{0.10 cm}
+        \begin{onecolentry}
+            \begin{highlights}
+                \item GPA: {{$details.GPA}}
+            \end{highlights}
+        \end{onecolentry}
+    {{end}}
 
     \section{Technologies}
     \begin{onecolentry}
-        \textbf{Languages:} C++, C, Java, Objective-C, C\#, SQL, JavaScript
+        \begin{highlights}
+            \item Languages/Frameworks: {{join .TechnicalSkills.LanguagesFrameworks ", "}}
+        \end{highlights}
     \end{onecolentry}
-
     \vspace{0.2 cm}
-
     \begin{onecolentry}
-        \textbf{Technologies:} .NET, Microsoft SQL Server, XCode, Interface Builder
+        \begin{highlights}
+            \item Technologies: {{join .TechnicalSkills.Technologies ", "}}
+        \end{highlights}
     \end{onecolentry}
 
     \section{Experience}
-    \begin{twocolentry}{
-        June 2005 – Aug 2007
-    }
-        \textbf{Software Engineer}, Apple -- Cupertino, CA
-    \end{twocolentry}
+    {{range $company, $job := .Experience}}
+        \begin{twocolentry}{ {{$job.Date}} }
+            {{$job.Role}}, {{$company}}
+        \end{twocolentry}
 
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Reduced time to render user buddy lists by 75\% by implementing a prediction algorithm
-            \item Integrated iChat with Spotlight Search by creating a tool to extract metadata from saved chat transcripts and provide metadata to a system-wide search database
-            \item Redesigned chat file format and implemented backward compatibility for search
-        \end{highlights}
-    \end{onecolentry}
-
-    \vspace{0.2 cm}
-
-    \begin{twocolentry}{
-        June 2003 – Aug 2003
-    }
-        \textbf{Software Engineer Intern}, Microsoft -- Redmond, WA
-    \end{twocolentry}
-
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Designed a UI for the VS open file switcher (Ctrl-Tab) and extended it to tool windows
-            \item Created a service to provide gradient across VS and VS add-ins, optimizing its performance via caching
-            \item Built an app to compute the similarity of all methods in a codebase, reducing the time from $\mathcal{O}(n^2)$ to $\mathcal{O}(n \log n)$
-            \item Created a test case generation tool that creates random XML docs from XML Schema
-            \item Automated the extraction and processing of large datasets from legacy systems using SQL and Perl scripts
-        \end{highlights}
-    \end{onecolentry}
+        \vspace{0.10 cm}
+        \begin{onecolentry}
+            \begin{highlights}
+                {{range $job.Responsibilities}}
+                    \item {{.}}
+                {{end}}
+            \end{highlights}
+        \end{onecolentry}
+        \vspace{0.4 cm}
+    {{end}}
 
     \section{Projects}
-    \begin{twocolentry}{
-        \href{https://github.com/sinaatalay/rendercv}{github.com/name/repo}
-    }
-        \textbf{Multi-User Drawing Tool}
-    \end{twocolentry}
+    {{range $project, $details := .Projects}}
+        \begin{twocolentry}{}
+            { {{$project}} }
+        \end{twocolentry}
 
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Developed an electronic classroom where multiple users can simultaneously view and draw on a "chalkboard" with each person's edits synchronized
-            \item Tools Used: C++, MFC
-        \end{highlights}
-    \end{onecolentry}
-
-    \vspace{0.2 cm}
-
-    \begin{twocolentry}{
-        \href{https://github.com/sinaatalay/rendercv}{github.com/name/repo}
-    }
-        \textbf{Synchronized Desktop Calendar}
-    \end{twocolentry}
-
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Developed a desktop calendar with globally shared and synchronized calendars, allowing users to schedule meetings with other users
-            \item Tools Used: C\#, .NET, SQL, XML
-        \end{highlights}
-    \end{onecolentry}
-
-    \vspace{0.2 cm}
-
-    \begin{twocolentry}{
-        2002
-    }
-        \textbf{Custom Operating System}
-    \end{twocolentry}
-
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Built a UNIX-style OS with a scheduler, file system, text editor, and calculator
-            \item Tools Used: C
-        \end{highlights}
-    \end{onecolentry}
+        \vspace{0.10 cm}
+        \begin{onecolentry}
+            \begin{highlights}
+                {{range $details}}
+                    \item {{.}}
+                {{end}}
+            \end{highlights}
+        \end{onecolentry}
+        \vspace{0.4 cm}
+    {{end}}
 
     \section{Organizations}
-    \begin{twocolentry}{
-        \href{https://github.com/sinaatalay/rendercv}{github.com/name/repo}
-    }
-        \textbf{Multi-User Drawing Tool}
-    \end{twocolentry}
+    {{range $org, $details := .Clubs}}
+        \begin{twocolentry}{}
+            \textbf{ {{$org}} }
+        \end{twocolentry}
+        \vspace{0.1 cm}
+        \begin{onecolentry}
+            \begin{highlights}
+                {{range $details}}
+                    \item {{.}}
+                {{end}}
+            \end{highlights}
+        \end{onecolentry}
+        \vspace{0.4 cm}
+    {{end}}
+\end{document}`
 
-    \vspace{0.10 cm}
-    \begin{onecolentry}
-        \begin{highlights}
-            \item Developed an electronic classroom where multiple users can simultaneously view and draw on a "chalkboard" with each person's edits synchronized
-            \item Tools Used: C++, MFC
-        \end{highlights}
-    \end{onecolentry}
-\end{document}
-	`
-
-	// Define file paths
-	texFile := "output.tex"
-	pdfFile := "output.pdf"
-
-	// Write LaTeX content to a file
-	err := os.WriteFile(texFile, []byte(latexContent), 0644)
-	if err != nil {
-		fmt.Printf("Error writing .tex file: %v\n", err)
-		os.Exit(1)
+func generateResume(jsonString string) error {
+	// Parse JSON string into struct
+	var resume ResumeInfo
+	if err := json.Unmarshal([]byte(jsonString), &resume); err != nil {
+		return fmt.Errorf("error parsing JSON: %v", err)
 	}
 
-	// Run pdflatex to generate PDF
+	// Create template with custom function
+	tmpl := template.New("resume")
+	tmpl.Funcs(template.FuncMap{
+		"join": strings.Join,
+	})
+
+	// Parse template
+	tmpl, err := tmpl.Parse(latexTemplate)
+	if err != nil {
+		return fmt.Errorf("error parsing template: %v", err)
+	}
+
+	// Create output file
+	texFile := "output.tex"
+	f, err := os.Create(texFile)
+	if err != nil {
+		return fmt.Errorf("error creating output file: %v", err)
+	}
+	defer f.Close()
+
+	// Execute template
+	if err := tmpl.Execute(f, resume); err != nil {
+		return fmt.Errorf("error executing template: %v", err)
+	}
+
+	// Generate PDF
 	cmd := exec.Command("pdflatex", texFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err = cmd.Run()
-	if err != nil {
-		fmt.Printf("Error running pdflatex: %v\n", err)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running pdflatex: %v", err)
+	}
+
+	return nil
+}
+
+func main() {
+	jsonString := `{
+		"Name": "Carolina Campos",
+		"Links": [
+			"github.com/Carol0427",
+			"Carolmeister@gmail.com",
+			"772-701-2041"
+		],
+		"Education": {
+			"Bachelor of Science in Computer Science": {
+				"Institution": "Florida Atlantic University",
+				"GPA": "3.4",
+				"Date": "December 2024"
+			}
+		},
+		"Technical Skills": {
+			"Languages/Frameworks": [
+				"Java",
+				"Python",
+				"JavaScript",
+				"C++",
+				"PHP",
+				"Spring",
+				"Node",
+				"React",
+				"MySQL",
+				"HTML5"
+			],
+			"Technologies": [
+				"Git",
+				"Linux",
+				"AWS",
+				"SaaS microservices",
+				"Docker/Kubernetes"
+			]
+		},
+		"Experience": {
+			"Entrust": {
+				"Date": "Sep 2023 – Sep 2024",
+				"Role": "Software Engineering Intern",
+				"Responsibilities": [
+					"Integrated client and company products for seamless cryptographic solutions, boosting deal closure rates by 23 percent and facilitating sales worth up to 100,000",
+					"Developed tools in Python to automate integration, reducing manual overhead and cutting integration errors by 12 percent",
+					"Authored technical guides, saving client engineers hundreds of hours by documenting common errors, which accelerated client's project timelines"
+				]
+			},
+			"Microsoft": {
+				"Date": "Oct 2019 – Oct 2022",
+				"Role": "Software Engineering Intern",
+				"Responsibilities": [
+					"Designed a UI for the VS open file switcher (Ctrl-Tab) and extended it to tool windows",
+					"Created a service to provide gradient across VS and VS add-ins, optimizing its performance via caching"
+				]
+			}
+		},
+		"Projects": {
+			"Multi-User Drawing Tool": [
+				"Developed full-stack IoT application with client specification for real-time environmental monitoring using a network of sensors for data ingestion and visualization",
+				"Technologies used: React, Grafana, MapBox API for front-end, and backend with Java, Spring, AWS IoT Core, Kafka, Telegraf for depth mathematics, InfluxDB for database, deployed on AWS EC2 instances"
+			],
+			"Synchronized Desktop Calendar": [
+				"Developed a desktop calendar with globally shared and synchronized calendars, allowing users to schedule meetings with other users"
+			]
+		},
+		"Clubs/Organizations": {
+			"Girls Who Code - President": [
+				"Delegated and oversaw tasks to a cross-functional 8-member Executive Board",
+				"Increased membership from 15 to 52, a 247% growth in less than a year",
+				"Successfully raised funds through car washes and donors which increased our budget by 55%"
+			],
+			"Medium- Technical Writing Blog": [
+				"Launched a Medium blog focused on explaining complex software engineering concepts to beginners, covering topics like deploying full-stack Next.js applications on EC2 instances."
+			]
+		}
+	}`
+
+	if err := generateResume(jsonString); err != nil {
+		fmt.Printf("Error generating resume: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Check if the PDF was created
-	if _, err := os.Stat(pdfFile); os.IsNotExist(err) {
-		fmt.Println("PDF generation failed.")
-		os.Exit(1)
-	}
-
-	fmt.Printf("Successfully generated PDF: %s\n", pdfFile)
+	fmt.Println("Successfully generated resume PDF!")
 }
